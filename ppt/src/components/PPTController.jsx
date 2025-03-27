@@ -1,42 +1,38 @@
 import React, { useEffect, useState } from "react";
 
 const PPTController = () => {
-    const [socket, setSocket] = useState(null);
+    const [gesture, setGesture] = useState(null);
 
     useEffect(() => {
-        const ws = new WebSocket("ws://localhost:9000");
-
-        ws.onopen = () => console.log("✅ Connected to WebSocket Server");
-        ws.onerror = (error) => console.error("❌ WebSocket Error:", error);
-        ws.onclose = () => console.log("🔴 WebSocket Disconnected");
-
-        ws.onmessage = (event) => {
+        const fetchGesture = async () => {
             try {
-                const data = JSON.parse(event.data);
-                console.log("Gesture received:", data.gesture);
+                const response = await fetch("http://localhost:5000/get_gesture");
+                const data = await response.json();
+                if (data.gesture) {
+                    setGesture(data.gesture);
+                    console.log("Gesture received:", data.gesture);
 
-                if (data.gesture === "swipe_right") {
-                    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
-                } else if (data.gesture === "swipe_left") {
-                    document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
-                } else if (data.gesture === "thumbs_up") {
-                    document.dispatchEvent(new KeyboardEvent("keydown", { key: "F5" })); // Start Presentation
-                } else if (data.gesture === "thumbs_down") {
-                    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); // Exit Presentation
+                    if (data.gesture === "swipe_right") {
+                        document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+                    } else if (data.gesture === "swipe_left") {
+                        document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" }));
+                    } else if (data.gesture === "thumbs_up") {
+                        document.dispatchEvent(new KeyboardEvent("keydown", { key: "F5" }));
+                    } else if (data.gesture === "thumbs_down") {
+                        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+                    }
                 }
             } catch (error) {
-                console.error("Error processing WebSocket message:", error);
+                console.error("Error fetching gesture:", error);
             }
         };
 
-        setSocket(ws); // Store WebSocket instance
-
-        return () => {
-            ws.close(); // Clean up on unmount
-        };
+        // Poll every 2 seconds
+        const interval = setInterval(fetchGesture, 2000);
+        return () => clearInterval(interval);
     }, []);
 
-    return <h2>🎤 Listening for Hand Gestures...</h2>;
+    return <h2>Latest Gesture: {gesture || "Waiting..."}</h2>;
 };
 
 export default PPTController;
